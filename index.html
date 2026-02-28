@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HerdVibe">
+<meta name="description" content="크립토, 미국 주식, 매크로 금융 분석 대시보드">
+
+<!-- PWA Manifest -->
+<link rel="manifest" href="./manifest.json">
+
+<!-- App Icons -->
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+<title>HerdVibe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    /* iOS 노치 대응 */
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+    background: #000;
+  }
+
+  /* 로딩 스플래시 */
+  #splash {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.4s ease;
+  }
+  #splash.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+  #splash .logo-text {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 2px;
+  }
+  #splash .sub {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12px;
+    color: #555;
+    margin-top: 8px;
+  }
+  #splash .loader {
+    width: 40px;
+    height: 2px;
+    background: #1a1a1a;
+    margin-top: 24px;
+    border-radius: 1px;
+    overflow: hidden;
+    position: relative;
+  }
+  #splash .loader::after {
+    content: '';
+    position: absolute;
+    left: -40px;
+    width: 40px;
+    height: 100%;
+    background: #22d3ee;
+    animation: loading 1s ease-in-out infinite;
+  }
+  @keyframes loading {
+    0% { left: -40px; }
+    100% { left: 40px; }
+  }
+
+  /* 앱 설치 배너 (브라우저에서 접속 시에만) */
+  #install-banner {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+    background: #111;
+    border-top: 1px solid #222;
+    padding: 14px 16px;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+    align-items: center;
+    gap: 12px;
+  }
+  #install-banner .ib-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+  #install-banner .ib-text {
+    flex: 1;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  #install-banner .ib-text strong {
+    color: #fff;
+    font-size: 13px;
+    display: block;
+  }
+  #install-banner .ib-text span {
+    color: #666;
+    font-size: 11px;
+  }
+  #install-banner .ib-btn {
+    background: #22d3ee;
+    color: #000;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  #install-banner .ib-close {
+    background: none;
+    border: none;
+    color: #555;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    flex-shrink: 0;
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&family=Noto+Sans+KR:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- 로딩 스플래시 -->
+<div id="splash">
+  <div class="logo-text">HERDVIBE</div>
+  <div class="sub">금융 분석 대시보드</div>
+  <div class="loader"></div>
+</div>
+
+<!-- 메인 콘텐츠 -->
+<iframe id="main" src="https://herdvibe.com" allow="clipboard-write; clipboard-read"></iframe>
+
+<!-- 앱 설치 배너 -->
+<div id="install-banner">
+  <div class="ib-icon">📊</div>
+  <div class="ib-text">
+    <strong>HerdVibe 앱 설치</strong>
+    <span>홈 화면에 추가하면 앱처럼 사용 가능</span>
+  </div>
+  <button class="ib-btn" id="install-btn">설치</button>
+  <button class="ib-close" id="install-close">&times;</button>
+</div>
+
+<script>
+// 서비스 워커 등록
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js')
+    .then(reg => console.log('[HerdVibe PWA] SW registered:', reg.scope))
+    .catch(err => console.log('[HerdVibe PWA] SW failed:', err));
+}
+
+// 스플래시 화면 제거
+const iframe = document.getElementById('main');
+const splash = document.getElementById('splash');
+iframe.addEventListener('load', () => {
+  setTimeout(() => splash.classList.add('hide'), 300);
+  setTimeout(() => splash.remove(), 800);
+});
+// 안전장치: 5초 후에는 무조건 스플래시 제거
+setTimeout(() => {
+  if (splash && splash.parentNode) {
+    splash.classList.add('hide');
+    setTimeout(() => splash.remove(), 500);
+  }
+}, 5000);
+
+// PWA 설치 프롬프트 처리
+let deferredPrompt;
+const banner = document.getElementById('install-banner');
+const installBtn = document.getElementById('install-btn');
+const closeBtn = document.getElementById('install-close');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // standalone 모드가 아닐 때만 배너 표시
+  if (!window.matchMedia('(display-mode: standalone)').matches) {
+    banner.style.display = 'flex';
+  }
+});
+
+installBtn.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log('[HerdVibe PWA] Install:', outcome);
+  deferredPrompt = null;
+  banner.style.display = 'none';
+});
+
+closeBtn.addEventListener('click', () => {
+  banner.style.display = 'none';
+  // 24시간 동안 다시 안 보기
+  localStorage.setItem('hv-install-dismissed', Date.now());
+});
+
+// 이미 설치된 경우 배너 숨김
+window.addEventListener('appinstalled', () => {
+  banner.style.display = 'none';
+  deferredPrompt = null;
+});
+
+// 이전에 닫았으면 24시간 동안 숨김
+const dismissed = localStorage.getItem('hv-install-dismissed');
+if (dismissed && Date.now() - parseInt(dismissed) < 86400000) {
+  banner.style.display = 'none';
+}
+
+// iOS Safari용 안내 (beforeinstallprompt 미지원)
+if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.navigator.standalone) {
+  // iOS에서는 네이티브 설치 프롬프트가 없으므로 수동 안내
+  if (!dismissed || Date.now() - parseInt(dismissed) > 86400000) {
+    banner.style.display = 'flex';
+    installBtn.textContent = '방법 보기';
+    installBtn.addEventListener('click', () => {
+      alert('Safari 하단의 공유 버튼(□↑)을 누른 후\n"홈 화면에 추가"를 선택하세요.');
+    }, { once: true });
+  }
+}
+</script>
+</body>
+</html>
